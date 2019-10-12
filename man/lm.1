@@ -1,0 +1,32 @@
+.TH lm 1 "13 November 2016" "markdir 1.0.0"
+.SH NAME
+lm - list marks
+.SH SYNOPSIS
+.B lm
+.I [mark]
+.B
+.SH DESCRIPTION
+Lists the directory and description for the specified mark, or all marks if no mark is specified.
+
+For example,
+
+$ lm
+
+documents    /home/user/Documents     My documents
+
+log          /var/log                 Log files
+
+$ lm log
+
+log          /var/log                 Log files
+
+.SH AUTHOR
+Written by Charles Pilon.
+.SH FILES
+~/marks
+.SH SEE ALSO
+am(1), cm(1), dm(1), em(1), gm(1), im(1), sm(1)
+.SH COPYRIGHT
+Copyright 2016 Charles Pilon
+.SH LICENSE
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.

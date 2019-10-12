@@ -1,0 +1,25 @@
+.TH sm 1 "13 November 2016" "markdir 1.0.0"
+.SH NAME
+sm - show mark
+.SH SYNOPSIS
+.B sm
+.I mark
+.B
+.SH DESCRIPTION
+Echos the directory tagged by the specified mark to STDOUT.
+
+For example,
+
+$ ls $(sm log)/apache2
+
+access.log  error.log  other_vhosts_access.log
+.SH AUTHOR
+Written by Charles Pilon.
+.SH FILES
+~/marks
+.SH SEE ALSO
+am(1), cm(1), dm(1), em(1), gm(1), im(1), lm(1)
+.SH COPYRIGHT
+Copyright 2016 Charles Pilon
+.SH LICENSE
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.

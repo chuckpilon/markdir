@@ -1,0 +1,30 @@
+.TH am 1 "13 November 2016" "markdir 1.0.0"
+.SH NAME
+am - add mark
+.SH SYNOPSIS
+.B am
+.I mark
+.B
+.SH DESCRIPTION
+Tag the current directory with the specified mark.
+After adding a mark to a directory, the mark can be used by the gm(1) and sm(1) commands.
+
+For example,
+
+$ cd /var/log
+
+$ am log
+
+$ ls $(sm log)/apache2
+
+access.log  error.log  other_vhosts_access.log
+.SH AUTHOR
+Written by Charles Pilon.
+.SH FILES
+~/marks
+.SH SEE ALSO
+cm(1), dm(1), em(1), gm(1), im(1), lm(1), sm(1)
+.SH COPYRIGHT
+Copyright 2016 Charles Pilon
+.SH LICENSE
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
