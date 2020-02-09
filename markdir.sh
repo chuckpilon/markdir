@@ -88,7 +88,7 @@ function lm()
         touch "${MARKFILE}"
     fi
 
-    if [ "x${1}" == "x" ]; then
+    if [ "x${1}" = "x" ]; then
         cat ${MARKFILE} | sed 's:/cygdrive::g' |  awk -F: '{printf "%-20.20s   %-80.80s   %-20.20s\n", $1, $2, $3}'
     else
         grep "^${1}:" ${MARKFILE} | sed 's:/cygdrive::g' |  awk -F: '{printf "%-20.20   %-80.80   %-20.20s\n", $1, $2, $3}'
@@ -192,10 +192,9 @@ function cm()
     fi
 
     cp ${MARKFILE} ${MARKFILE}.tmp
-    > ${MARKFILE}
+    rm ${MARKFILE}
 
     while read line; do
-        #echo $line
         mark=$(echo $line | awk -F: '{print $1}')
         markdir=$(echo $line | awk -F: '{print $2}')
         if [[ ! -d $markdir ]]; then
