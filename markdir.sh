@@ -205,3 +205,29 @@ function cm()
     done < "${MARKFILE}.tmp"
     rm ${MARKFILE}.tmp
 }
+
+# xm - Execute Mark
+# Usage: Executes the command associated with the directory
+# Example: xm wls103bin
+function xm()
+{
+    if [ ! -n "$MARKFILE" ]; then
+        echo "MARKFILE is not set." >&2
+        return 1
+    fi
+    if [ ! -f "${MARKFILE}" ]; then
+        touch "${MARKFILE}"
+    fi
+
+    mark=$(grep "^[^:]*:${PWD}:" ${MARKFILE} | awk -F: '{print $1}')
+    if [[ ${mark} == "" ]]; then
+        echo "${PWD} is not marked."
+    else
+        command=$(grep "^[^:]*:${PWD}:" ${MARKFILE} | awk -F: '{print $4}')
+        if [[ ${command} == "" ]]; then
+            echo "No command associated with ${mark}"
+        else
+            sh -c ${command}
+        fi
+    fi
+}
