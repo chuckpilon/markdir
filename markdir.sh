@@ -17,6 +17,31 @@ function _markdir_complete()
     COMPREPLY=( $(compgen -W "${tags}" -- ${cur}) )
 }
 
+urlencode() {
+    # urlencode <string>
+
+    old_lc_collate=$LC_COLLATE
+    LC_COLLATE=C
+
+    local length="${#1}"
+    for (( i = 0; i < length; i++ )); do
+        local c="${1:$i:1}"
+        case $c in
+            [a-zA-Z0-9.~_-]) printf '%s' "$c" ;;
+            *) printf '%%%02X' "'$c" ;;
+        esac
+    done
+
+    LC_COLLATE=$old_lc_collate
+}
+
+urldecode() {
+    # urldecode <string>
+
+    local url_encoded="${1//+/ }"
+    printf "${url_encoded//\%/\\x}"
+}
+
 # im - Is Marked
 # Usage: im
 # If the current directory is marked, shows the mark, otherwise displays an error message.
@@ -227,7 +252,37 @@ function xm()
         if [[ ${command} == "" ]]; then
             echo "No command associated with ${mark}"
         else
-            sh -c ${command}
+            decoded=$(urldecode "${command}")
+            echo "${decoded}"
+            sh -c "${decoded}"
+        fi
+    fi
+}
+
+# tm - Test Mark
+# Usage: Executes the test command associated with the directory
+# Example: tm
+function tm()
+{
+    if [ ! -n "$MARKFILE" ]; then
+        echo "MARKFILE is not set." >&2
+        return 1
+    fi
+    if [ ! -f "${MARKFILE}" ]; then
+        touch "${MARKFILE}"
+    fi
+
+    mark=$(grep "^[^:]*:${PWD}:" ${MARKFILE} | awk -F: '{print $1}')
+    if [[ ${mark} == "" ]]; then
+        echo "${PWD} is not marked."
+    else
+        command=$(grep "^[^:]*:${PWD}:" ${MARKFILE} | awk -F: '{print $5}')
+        if [[ ${command} == "" ]]; then
+            echo "No command associated with ${mark}"
+        else
+            decoded=$(urldecode "${command}")
+            echo ${decoded}
+            sh -c ${decoded}
         fi
     fi
 }
