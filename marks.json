@@ -1,0 +1,21 @@
+{
+    "marks": {
+        "tmp": {
+            "dir": "/tmp"
+        },
+        "project": {
+            "dir": "/Users/me/projects/project",
+            "description": "My Project"
+        }
+    },
+    "directories": {
+        "/Users/me/projects/project": {
+            "tasks": {
+                "build": "yarn build",
+                "run": "yarn dev",
+                "test": "yarn mocha"
+            }
+        }
+    },
+    "config": {}
+}

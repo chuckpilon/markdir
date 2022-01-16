@@ -1,16 +1,17 @@
-.TH im 1 "16 January 2022" "markdir 2.0.0"
+.TH xm 1 "16 January 2022" "markdir 2.0.0"
 .SH NAME
-im - is marked
+xm - execute Mark
 .SH SYNOPSIS
-.B im
+.B xm [task]
+.B
 .SH DESCRIPTION
-Checks to see if the current working directory is tagged in the mark file. If so, the tag is output to STDOUT.
+Executes the named task associated with the directory, or the run task by default.
 .SH AUTHOR
 Written by Charles Pilon.
 .SH ENVIRONMENT
 MARKFILE  File used to map marks to directories and directories to tasks.
 .SH SEE ALSO
-am(1), bm(1), cm(1), dm(1), em(1), gm(1), lm(1), sm(1), tm(1), xm(1)
+am(1), bm(1), cm(1), dm(1), em(1), gm(1), im(1), lm(1), sm(1), tm(1)
 .SH COPYRIGHT
 Copyright 2022 Charles Pilon
 .SH LICENSE

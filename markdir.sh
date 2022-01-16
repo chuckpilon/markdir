@@ -1,45 +1,112 @@
-complete -F _markdir_complete im
+complete -F _markdir_complete dm
+complete -F _markdir_complete gm
 complete -F _markdir_complete lm
 complete -F _markdir_complete sm
-complete -F _markdir_complete gm
-complete -F _markdir_complete dm
 
-export MARKFILE=~/marks
-
-# Command line completion function for im, lm, sm, gm, and dm.
-# Completes a partially enterred mark.
-function _markdir_complete()
+# am - Add Mark
+# Adds a mark for the current working directory.
+# Usage: am
+# Example:
+#    $ cd /app/bea/wlserver_10.3/server/bin
+#    $ am wls103bin
+function am()
 {
-    COMPREPLY=()
-    cur="${COMP_WORDS[COMP_CWORD]}"
+    _verify_markfile || return 1
 
-    tags="$(grep ^${cur} ${MARKFILE} | awk -F: '{print $1;}')"
-    COMPREPLY=( $(compgen -W "${tags}" -- ${cur}) )
+    if [ -z "${1}" ]; then
+        echo "Usage: am mark" >&2
+        return 1
+    fi
+
+    mark="${1}"
+    directory=`_get_directory_for_mark "${mark}"`
+    if [ "${directory}" != "null" ]; then
+        echo "${mark} already marks ${directory}" >&2
+        return 2
+    fi
+
+    description="${2}"
+
+    cat "${MARKFILE}" | jq ".marks |= . + { \"${mark}\": { \"dir\": \"${PWD}\", \"description\": \"${description}\" } }" > /tmp/$(basename "$MARKFILE")
+    cp /tmp/$(basename "$MARKFILE") "${MARKFILE}"
+    rm /tmp/$(basename "$MARKFILE")
 }
 
-urlencode() {
-    # urlencode <string>
+# bm - Build Mark
+# Usage: Executes the build task associated with the directory
+# Example: bm
+function bm()
+{
+    _verify_markfile || return 1
 
-    old_lc_collate=$LC_COLLATE
-    LC_COLLATE=C
+    _execute_directory_task "${PWD}" "build" || return 1
+}
 
-    local length="${#1}"
-    for (( i = 0; i < length; i++ )); do
-        local c="${1:$i:1}"
-        case $c in
-            [a-zA-Z0-9.~_-]) printf '%s' "$c" ;;
-            *) printf '%%%02X' "'$c" ;;
-        esac
+# cm - Check Marks
+# Usage: Removes invalid marks from the mark file.
+# Example: cm
+function cm()
+{
+    _verify_markfile || return 1
+
+    MARKS=($((cat "${MARKFILE}" | jq -r '.marks | keys | @sh') | tr -d \'\"))
+    for mark in "${MARKS[@]}"
+    do
+        directory=`_get_directory_for_mark "${mark}"`
+        if [[ ! -d "$directory" ]]; then
+            echo "${mark} is not valid (${directory})"
+            dm "${mark}"
+        fi
     done
-
-    LC_COLLATE=$old_lc_collate
 }
 
-urldecode() {
-    # urldecode <string>
+# dm - Delete Mark
+# Usage: dm mark
+# Example: dm wls103bin
+function dm()
+{
+    _verify_markfile || return 1
 
-    local url_encoded="${1//+/ }"
-    printf "${url_encoded//\%/\\x}"
+    if [ -z "${1}" ]; then
+        echo "Usage: dm mark" >&2
+        return 1
+    fi
+
+    mark="${1}"
+    cat "${MARKFILE}" | jq ".marks |= del(.\"$mark\")" > /tmp/$(basename "$MARKFILE")
+    cp /tmp/$(basename "$MARKFILE") "${MARKFILE}"
+    rm /tmp/$(basename "$MARKFILE")
+}
+
+# em - Edit Markfile
+# Usage: em
+function em()
+{
+    _verify_markfile || return 1
+
+    if [ ! -n "$EDITOR" ]; then
+        echo "EDITOR is not set." >&2
+        return 1
+    fi
+
+    ${EDITOR} "${MARKFILE}"
+}
+
+# gm - Goto Mark
+# Usage: Changes the working directory to the directory associated with the mark.
+# Example: gm wls103bin
+function gm()
+{
+    _verify_markfile || return 1
+
+    if [ -z "${1}" ]; then
+        echo "Usage: sm mark" >&2
+        return 1
+    fi
+
+    extended_mark="${1}"
+    extended_markdir=`_get_extended_markdir "${extended_mark}"` || { echo "${1} not found." >&2; return 2; }
+    cd "${extended_markdir}"
 }
 
 # im - Is Marked
@@ -51,72 +118,30 @@ urldecode() {
 #    wls103bin
 function im()
 {
-    if [ ! -n "$MARKFILE" ]; then
-        echo "MARKFILE is not set." >&2
-        return 1
-    fi
-    if [ ! -f "${MARKFILE}" ]; then
-        touch "${MARKFILE}"
-    fi
+    _verify_markfile || return 1
 
-    mark=$(grep "^[^:]*:${PWD}:" ${MARKFILE} | awk -F: '{print $1}')
-    if [[ ${mark} == "" ]]; then
-        echo "${PWD} is not marked."
+    mark=`_get_mark_for_directory "${PWD}"`
+    if [[ "${mark}" == "" ]]; then
+        echo "${PWD} is not marked." >&2
+        return 1
     else
         echo "${mark}"
     fi
 }
 
-# am - Add Mark
-# Adds a mark for the current working directory.
-# Usage: am
-# Example:
-#    $ cd /app/bea/wlserver_10.3/server/bin
-#    $ am wls103bin
-function am()
-{
-    if [ ! -n "$MARKFILE" ]; then
-        echo "MARKFILE is not set." >&2
-        return 1
-    fi
-    if [ ! -f "${MARKFILE}" ]; then
-        touch "${MARKFILE}"
-    fi
-
-    # Check to see if mark is already used.
-    mark=$(echo ${1} | awk -F/ '{print $1}')
-    markdir=$(grep "^${mark}:" ${MARKFILE} | awk -F: '{print $2}')
-    if [[ ${markdir} != "" ]]; then
-        echo "${1} already marks ${markdir}" >&2
-        return 2
-    fi
-
-
-    echo "${1}:${PWD}:${2}" >> ${MARKFILE}
-    sort -u ${MARKFILE} > ${MARKFILE}.tmp
-    cp ${MARKFILE}.tmp ${MARKFILE}
-    rm ${MARKFILE}.tmp
-}
-
 # lm - List Marks
 # Usage: lm [mark]
-# If mark is specified, displays all information on the mark.  Otherwise, displays the entire mark file.
-# Output is formatted.
+# If mark is specified, displays all information on the mark.  Otherwise, displays all marks and
+# directories.
 function lm()
 {
-    if [ ! -n "$MARKFILE" ]; then
-        echo "MARKFILE is not set." >&2
-        return 1
-    fi
+    _verify_markfile || return 1
 
-    if [ ! -f "${MARKFILE}" ]; then
-        touch "${MARKFILE}"
-    fi
-
-    if [ "x${1}" = "x" ]; then
-        cat ${MARKFILE} | sed 's:/cygdrive::g' |  awk -F: '{printf "%-20.20s   %-80.80s   %-20.20s\n", $1, $2, $3}'
+    mark="${1}"
+    if [ -z "${mark}" ]; then
+        cat "${MARKFILE}" | jq '.marks | to_entries | map( { mark: .key, description: .value.description, dir: .value.dir })'
     else
-        grep "^${1}:" ${MARKFILE} | sed 's:/cygdrive::g' |  awk -F: '{printf "%-20.20   %-80.80   %-20.20s\n", $1, $2, $3}'
+        cat "${MARKFILE}" | jq ".marks.\"${mark}\""
     fi
 }
 
@@ -127,162 +152,104 @@ function lm()
 #   $ cp item200128610.jpg $(sm images)
 function sm()
 {
-    if [ ! -n "$MARKFILE" ]; then
-        echo "MARKFILE is not set." >&2
+    _verify_markfile || return 1
+
+    if [ -z "${1}" ]; then
+        echo "Usage: sm mark" >&2
         return 1
     fi
-    if [ ! -f "${MARKFILE}" ]; then
-        touch "${MARKFILE}"
-    fi
 
-    mark=$(echo ${1} | awk -F/ '{print $1}')
-    markdir=$(grep "^${mark}:" ${MARKFILE} | awk -F: '{print $2}')
-    if [[ ${markdir} == "" ]]; then
-        echo "${1} not found." >&2
-    else
-        subdir=$(echo ${1} | sed "s/^${mark}//g")
-        echo "${markdir}${subdir}"
-    fi
-}
-
-# gm - Goto Mark
-# Usage: Changes the working directory to the directory associated with the mark.
-# Example: gm wls103bin
-function gm()
-{
-    if [ ! -n "$MARKFILE" ]; then
-        echo "MARKFILE is not set." >&2
-        return 1
-    fi
-    if [ ! -f "${MARKFILE}" ]; then
-        touch "${MARKFILE}"
-    fi
-
-    mark=$(echo ${1} | awk -F/ '{print $1}')
-    markdir=$(grep "^${mark}:" ${MARKFILE} | awk -F: '{print $2}')
-    if [[ ${markdir} == "" ]]; then
-        echo "${1} not found." >&2
-    else
-        subdir=$(echo ${1} | sed "s/^${mark}//g")
-        cd "${markdir}${subdir}"
-    fi
-}
-
-# dm - Delete Mark
-# Usage: dm mark
-# Example: dm wls103bin
-function dm()
-{
-    if [ ! -n "$MARKFILE" ]; then
-        echo "MARKFILE is not set." >&2
-        return 1
-    fi
-    if [ ! -f "${MARKFILE}" ]; then
-        touch "${MARKFILE}"
-    fi
-    grep -v "^${1}:" ${MARKFILE} > ${MARKFILE}.tmp
-    cp ${MARKFILE}.tmp ${MARKFILE}
-    rm ${MARKFILE}.tmp
-}
-
-# em - Edit Markfile
-# Usage: em
-function em()
-{
-    if [ ! -n "$EDITOR" ]; then
-        echo "EDITOR is not set." >&2
-        return 1
-    fi
-    if [ ! -n "$MARKFILE" ]; then
-        echo "MARKFILE is not set." >&2
-        return 1
-    fi
-    if [ ! -f "${MARKFILE}" ]; then
-        touch "${MARKFILE}"
-    fi
-    ${EDITOR} ${MARKFILE}
-}
-
-# cm - Check Marks
-# Usage: Removes invalid marks from the mark file.
-# Example: cm
-function cm()
-{
-    if [ ! -n "$MARKFILE" ]; then
-        echo "MARKFILE is not set." >&2
-        return 1
-    fi
-    if [ ! -f "${MARKFILE}" ]; then
-        touch "${MARKFILE}"
-    fi
-
-    cp ${MARKFILE} ${MARKFILE}.tmp
-    rm ${MARKFILE}
-
-    while read line; do
-        mark=$(echo $line | awk -F: '{print $1}')
-        markdir=$(echo $line | awk -F: '{print $2}')
-        if [[ ! -d $markdir ]]; then
-            echo "${mark} is not valid (${markdir})"
-        else
-            echo "${line}" >> ${MARKFILE}
-        fi
-    done < "${MARKFILE}.tmp"
-    rm ${MARKFILE}.tmp
-}
-
-# xm - Execute Mark
-# Usage: Executes the command associated with the directory
-# Example: xm wls103bin
-function xm()
-{
-    if [ ! -n "$MARKFILE" ]; then
-        echo "MARKFILE is not set." >&2
-        return 1
-    fi
-    if [ ! -f "${MARKFILE}" ]; then
-        touch "${MARKFILE}"
-    fi
-
-    mark=$(grep "^[^:]*:${PWD}:" ${MARKFILE} | awk -F: '{print $1}')
-    if [[ ${mark} == "" ]]; then
-        echo "${PWD} is not marked."
-    else
-        command=$(grep "^[^:]*:${PWD}:" ${MARKFILE} | awk -F: '{print $4}')
-        if [[ ${command} == "" ]]; then
-            echo "No command associated with ${mark}"
-        else
-            decoded=$(urldecode "${command}")
-            echo "${decoded}"
-            sh -c "${decoded}"
-        fi
-    fi
+    extended_mark="${1}"
+    extended_markdir=`_get_extended_markdir "${extended_mark}"` || { echo "${1} not found." >&2; return 2; }
+    echo "${extended_markdir}"
 }
 
 # tm - Test Mark
-# Usage: Executes the test command associated with the directory
+# Usage: Executes the test task associated with the directory
 # Example: tm
 function tm()
 {
-    if [ ! -n "$MARKFILE" ]; then
+    _verify_markfile || return 1
+
+    _execute_directory_task "${PWD}" "test" || return 1
+}
+
+# xm - Execute Mark
+# Usage: Executes the run task associated with the directory
+# Example: xm wls103bin
+function xm()
+{
+    _verify_markfile || return 1
+
+    if [ -z "${1}" ]; then
+        task="run"
+    else
+        task="${1}"
+    fi
+    _execute_directory_task "${PWD}" "${task}"
+}
+
+function _get_directory_for_mark()
+{
+    mark="${1}"
+    directory=`cat "${MARKFILE}" | jq ".marks.\"${mark}\".dir" -r`
+    echo "${directory}"
+}
+
+function _get_mark_for_directory()
+{
+    directory="${1}"
+    mark=`cat "${MARKFILE}" | jq ".marks | to_entries[] | select(.value.dir == \"${directory}\") | .key" -r`
+    echo "${mark}"
+}
+
+# Executes the task (build, test, run, etc.) for the mark
+function _execute_directory_task()
+{
+    directory="${1}"
+    task="${2}"
+
+    command=`cat "${MARKFILE}" | jq ".directories.\"${directory}\".tasks.\"${task}\"" -r`
+    if [ "${command}" = "null" ]; then
+        echo "${task} task not set for ${directory}" >&2
+        return 2
+    fi
+
+    echo "${command}"
+    sh -c $command
+}
+
+function _verify_markfile()
+{
+    if [ ! -n "${MARKFILE}" ]; then
         echo "MARKFILE is not set." >&2
         return 1
     fi
+
     if [ ! -f "${MARKFILE}" ]; then
         touch "${MARKFILE}"
     fi
+}
 
-    mark=$(grep "^[^:]*:${PWD}:" ${MARKFILE} | awk -F: '{print $1}')
-    if [[ ${mark} == "" ]]; then
-        echo "${PWD} is not marked."
+# Command line completion function for im, lm, sm, gm, and dm.
+# Completes a partially enterred mark.
+function _markdir_complete()
+{
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    MARKS=`cat "${MARKFILE}" | jq '.marks | to_entries[] | .key' -r`
+    COMPREPLY=( $(compgen -W "${MARKS}" -- ${cur}) )
+}
+
+function _get_extended_markdir()
+{
+    mark=`echo "${1}" | awk -F/ '{print $1}'`
+    directory=`_get_directory_for_mark "${mark}"`
+    if [[ "${directory}" == "null" ]]; then
+        return 2
     else
-        command=$(grep "^[^:]*:${PWD}:" ${MARKFILE} | awk -F: '{print $5}')
-        if [[ ${command} == "" ]]; then
-            echo "No command associated with ${mark}"
-        else
-            decoded=$(urldecode "${command}")
-            echo ${decoded}
-            sh -c ${decoded}
-        fi
+        subdir=`echo "${1}" | sed "s/^${mark}//g"`
+        echo "${directory}${subdir}"
     fi
 }
