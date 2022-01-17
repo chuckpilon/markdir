@@ -32,10 +32,10 @@ function am()
     rm /tmp/$(basename "$MARKFILE")
 }
 
-# bm - Build Mark
+# bd - Build Directory
 # Usage: Executes the build task associated with the directory
-# Example: bm
-function bm()
+# Example: bd
+function bd()
 {
     _verify_markfile || return 1
 
@@ -164,20 +164,20 @@ function sm()
     echo "${extended_markdir}"
 }
 
-# tm - Test Mark
+# td - Test Directory
 # Usage: Executes the test task associated with the directory
-# Example: tm
-function tm()
+# Example: td
+function td()
 {
     _verify_markfile || return 1
 
     _execute_directory_task "${PWD}" "test" || return 1
 }
 
-# xm - Execute Mark
-# Usage: Executes the run task associated with the directory
-# Example: xm wls103bin
-function xm()
+# xd - Execute Directory
+# Usage: Executes the specified task associated with the directory, or the run task by default
+# Example: xd wls103bin
+function xd()
 {
     _verify_markfile || return 1
 

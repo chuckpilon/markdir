@@ -17,14 +17,14 @@ $ cd /var/log
 $ am log "Log files"
 ```
 
-### bm - Build Mark
+### bd - Build Directory
 Executes the `build` task associated with the current directory.
 
-Usage: `bm`
+Usage: `bd`
 
 ```
 $ cd /projects/project
-$ bm
+$ bd
 ```
 
 ### cm - Check Mark File
@@ -110,27 +110,27 @@ error.log
 other_vhosts_access.log
 ```
 
-### tm - Test Mark
+### td - Test Directory
 Executes the `test` task associated with the current directory.
 
-Usage: `tm`
+Usage: `td`
 
 ```
 $ gm project
-$ tm
+$ td
 yarn test
 ```
 
-### xm - eXecute Mark
-Executes the `run` task associated with the current directory.
+### xd - Execute Directory
+Executes the specified task associated with the current directory, or the run task by default.
 
-Usage: `xm [task]`
+Usage: `xd [task]`
 
 ```
 $ gm project
-$ xm
+$ xd
 yarn dev
-$ xm lint
+$ xd lint
 yarn lint
 ```
 
