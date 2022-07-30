@@ -109,6 +109,27 @@ function gm()
     cd "${extended_markdir}"
 }
 
+# bd - Install Directory
+# Usage: Executes the install task associated with the directory
+# Example: id
+function id()
+{
+    _verify_markfile || return 1
+
+    _execute_directory_task "${PWD}" "install" || return 1
+}
+
+# ud - Up Directory
+# Usage: Executes the up task associated with the directory
+# Example: ud
+function ud()
+{
+    _verify_markfile || return 1
+
+    _execute_directory_task "${PWD}" "up" || return 1
+}
+
+
 # im - Is Marked
 # Usage: im
 # If the current directory is marked, shows the mark, otherwise displays an error message.
@@ -174,6 +195,29 @@ function td()
     _execute_directory_task "${PWD}" "test" || return 1
 }
 
+# sd - Show Directory
+# Usage: sd [directory|mark]
+# Displays the information associated with a directory or a marked directory.
+# Example:
+#   $ sd project
+function sd()
+{
+    _verify_markfile || return 1
+
+    if [ -z "${1}" ]; then
+        directory="$PWD"
+    elif [ -d "${1}" ]; then
+        directory="${1}"
+    else 
+        directory=`_get_directory_for_mark "${1}"`
+        if [ $directory == "null" ]; then
+            echo "${1} not found." >&2; return 2;
+        fi
+    fi
+    _get_info_for_directory "${directory}" || { echo "${1} not found." >&2; return 2; }
+}
+
+
 # xd - Execute Directory
 # Usage: Executes the specified task associated with the directory, or the run task by default
 # Example: xd wls103bin
@@ -187,6 +231,12 @@ function xd()
         task="${1}"
     fi
     _execute_directory_task "${PWD}" "${task}"
+}
+
+function _get_info_for_directory()
+{
+    directory="${1}"
+    cat "${MARKFILE}" | jq ".directories.\"${directory}\"" -r
 }
 
 function _get_directory_for_mark()
