@@ -39,7 +39,7 @@ function bd()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "build" || return 1
+    _execute_directory_task "${PWD}" "build" ${*} || return 1
 }
 
 # cm - Check Marks
@@ -116,7 +116,7 @@ function id()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "install" || return 1
+    _execute_directory_task "${PWD}" "install" ${*} || return 1
 }
 
 # ud - Up Directory
@@ -126,7 +126,7 @@ function ud()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "up" || return 1
+    _execute_directory_task "${PWD}" "up" ${*} || return 1
 }
 
 
@@ -192,7 +192,7 @@ function td()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "test" || return 1
+    _execute_directory_task "${PWD}" "test" ${*} || return 1
 }
 
 # sd - Show Directory
@@ -229,8 +229,9 @@ function xd()
         task="run"
     else
         task="${1}"
+        shift
     fi
-    _execute_directory_task "${PWD}" "${task}"
+    _execute_directory_task "${PWD}" "${task}" ${*}
 }
 
 function _get_info_for_directory()
@@ -258,6 +259,7 @@ function _execute_directory_task()
 {
     directory="${1}"
     task="${2}"
+    shift 2
 
     command=`cat "${MARKFILE}" | jq ".directories.\"${directory}\".tasks.\"${task}\"" -r`
     if [ "${command}" = "null" ]; then
@@ -265,8 +267,8 @@ function _execute_directory_task()
         return 2
     fi
 
-    echo "${command}"
-    sh -c $command
+    echo "${command} ${*}"
+    sh -c "${command} ${*}"
 }
 
 function _verify_markfile()
