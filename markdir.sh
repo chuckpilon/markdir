@@ -237,20 +237,20 @@ function xd()
 function _get_info_for_directory()
 {
     directory="${1}"
-    cat "${MARKFILE}" | jq ".directories.\"${directory}\"" -r
+    cat "${MARKFILE}" | jq -r ".directories.\"${directory}\""
 }
 
 function _get_directory_for_mark()
 {
     mark="${1}"
-    directory=`cat "${MARKFILE}" | jq ".marks.\"${mark}\".dir" -r`
+    directory=`cat "${MARKFILE}" | jq -r ".marks.\"${mark}\".dir"`
     echo "${directory}"
 }
 
 function _get_mark_for_directory()
 {
     directory="${1}"
-    mark=`cat "${MARKFILE}" | jq ".marks | to_entries[] | select(.value.dir == \"${directory}\") | .key" -r`
+    mark=`cat "${MARKFILE}" | jq -r ".marks | to_entries[] | select(.value.dir == \"${directory}\") | .key"`
     echo "${mark}"
 }
 
@@ -261,14 +261,21 @@ function _execute_directory_task()
     task="${2}"
     shift 2
 
-    command=`cat "${MARKFILE}" | jq ".directories.\"${directory}\".tasks.\"${task}\"" -r`
+    command_structure=`cat "${MARKFILE}" | jq -r ".directories.\"${directory}\".tasks.\"${task}\""`
     if [ "${command}" = "null" ]; then
         echo "${task} task not set for ${directory}" >&2
         return 2
     fi
+    command=`echo ${command_structure} | jq -r ".command"`
+    environment_structure=`echo ${command_structure} | jq -r ".env"`
+    if [[ "${environment_structure}" == "null" ]]; then
+        environment=""
+    else
+        environment=`echo ${environment_structure} | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' '`
+    fi
 
-    echo "${command} ${*}"
-    sh -c "${command} ${*}"
+    echo "${environment} ${command} ${*}"
+    sh -c "${environment} ${command} ${*}"
 }
 
 function _verify_markfile()
@@ -290,7 +297,7 @@ function _markdir_complete()
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
 
-    MARKS=`cat "${MARKFILE}" | jq '.marks | to_entries[] | .key' -r`
+    MARKS=`cat "${MARKFILE}" | jq -r '.marks | to_entries[] | .key'`
     COMPREPLY=( $(compgen -W "${MARKS}" -- ${cur}) )
 }
 
