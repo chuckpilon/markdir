@@ -262,7 +262,7 @@ function _execute_directory_task()
     shift 2
 
     command_structure=`cat "${MARKFILE}" | jq -r ".directories.\"${directory}\".tasks.\"${task}\""`
-    if [ "${command}" = "null" ]; then
+    if [ "${command_structure}" = "null" ]; then
         echo "${task} task not set for ${directory}" >&2
         return 2
     fi
