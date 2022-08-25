@@ -4,8 +4,10 @@ complete -F _markdir_complete lm
 complete -F _markdir_complete sm
 
 # am - Add Mark
-# Adds a mark for the current working directory.
-# Usage: am
+# Adds a mark for the current working directory. The mark defaults to the directory's
+# basename.
+# 
+# Usage: am [mark]
 # Example:
 #    $ cd /app/bea/wlserver_10.3/server/bin
 #    $ am wls103bin
@@ -14,11 +16,11 @@ function am()
     _verify_markfile || return 1
 
     if [ -z "${1}" ]; then
-        echo "Usage: am mark" >&2
-        return 1
+        mark=`basename ${PWD}`
+    else
+        mark="${1}"
     fi
 
-    mark="${1}"
     directory=`_get_directory_for_mark "${mark}"`
     if [ "${directory}" != "null" ]; then
         echo "${mark} already marks ${directory}" >&2
