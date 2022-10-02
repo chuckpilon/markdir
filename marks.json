@@ -11,8 +11,8 @@
     "directories": {
         "/Users/me/projects/project": {
             "tasks": {
+                "default": "yarn dev",
                 "build": "yarn build",
-                "run": "yarn dev",
                 "test": "yarn mocha"
             }
         }

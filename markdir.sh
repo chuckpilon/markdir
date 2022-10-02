@@ -221,14 +221,14 @@ function sd()
 
 
 # xd - Execute Directory
-# Usage: Executes the specified task associated with the directory, or the run task by default
+# Usage: Executes the specified task associated with the directory, or the default task by default
 # Example: xd wls103bin
 function xd()
 {
     _verify_markfile || return 1
 
     if [ -z "${1}" ]; then
-        task="run"
+        task="default"
     else
         task="${1}"
         shift
@@ -256,7 +256,7 @@ function _get_mark_for_directory()
     echo "${mark}"
 }
 
-# Executes the task (build, test, run, etc.) for the mark
+# Executes the task (build, test, default, etc.) for the mark
 function _execute_directory_task()
 {
     directory="${1}"
@@ -273,11 +273,11 @@ function _execute_directory_task()
     if [[ "${environment_structure}" == "null" ]]; then
         environment=""
     else
-        environment=`echo ${environment_structure} | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' '`
+        environment=`echo ${environment_structure} | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' ' | tr '$' ' '`
     fi
 
-    echo "${environment} ${command} ${*}"
-    sh -c "${environment} ${command} ${*}"
+    echo "${environment}${command} ${*}"
+    sh -c "${environment}${command} ${*}"
 }
 
 function _verify_markfile()
