@@ -41,7 +41,7 @@ function bd()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "build" ${*} || return 1
+    _execute_directory_task "${PWD}" "build" "FALSE" ${*} || return 1
 }
 
 # cm - Check Marks
@@ -118,7 +118,7 @@ function id()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "install" ${*} || return 1
+    _execute_directory_task "${PWD}" "install" "FALSE" ${*} || return 1
 }
 
 # ud - Up Directory
@@ -128,7 +128,7 @@ function ud()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "up" ${*} || return 1
+    _execute_directory_task "${PWD}" "up" "FALSE" ${*} || return 1
 }
 
 
@@ -194,7 +194,7 @@ function td()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "test" ${*} || return 1
+    _execute_directory_task "${PWD}" "test" "FALSE" ${*} || return 1
 }
 
 # sd - Show Directory
@@ -227,13 +227,20 @@ function xd()
 {
     _verify_markfile || return 1
 
+    if [ "${1}" = "-s" ]; then
+        show_only="TRUE"
+        shift 1
+    else
+        show_only="FALSE"
+    fi
+
     if [ -z "${1}" ]; then
         task="default"
     else
         task="${1}"
-        shift
+        shift 1
     fi
-    _execute_directory_task "${PWD}" "${task}" ${*}
+    _execute_directory_task "${PWD}" "${task}" "${show_only}" ${*}
 }
 
 function _get_info_for_directory()
@@ -261,7 +268,8 @@ function _execute_directory_task()
 {
     directory="${1}"
     task="${2}"
-    shift 2
+    show_only="${3}"
+    shift 3
 
     command_structure=`cat "${MARKFILE}" | jq -r ".directories.\"${directory}\".tasks.\"${task}\""`
     if [ "${command_structure}" = "null" ]; then
@@ -277,7 +285,11 @@ function _execute_directory_task()
     fi
 
     echo "${environment}${command} ${*}"
-    sh -c "${environment}${command} ${*}"
+
+    if [ "${show_only}" = "FALSE" ]; then
+        sh -c "${environment}${command} ${*}"
+    fi
+
 }
 
 function _verify_markfile()
