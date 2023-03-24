@@ -51,7 +51,7 @@ function cm()
 {
     _verify_markfile || return 1
 
-    MARKS=($((cat "${MARKFILE}" | jq -r '.marks | keys | @sh') | tr -d \'\"))
+    MARKS=$((cat "${MARKFILE}" | jq -r '.marks | keys | @sh') | tr -d \'\")
     for mark in "${MARKS[@]}"
     do
         directory=`_get_directory_for_mark "${mark}"`
@@ -78,6 +78,33 @@ function dm()
     cat "${MARKFILE}" | jq ".marks |= del(.\"$mark\")" > /tmp/$(basename "$MARKFILE")
     cp /tmp/$(basename "$MARKFILE") "${MARKFILE}"
     rm /tmp/$(basename "$MARKFILE")
+}
+
+# ed - Environment for Directory
+# Usage: ed [directory|mark]
+function ed()
+{
+    _verify_markfile || return 1
+
+    if [ -z "${1}" ]; then
+        directory="$PWD"
+    elif [ -d "${1}" ]; then
+        directory="${1}"
+    else 
+        directory=`_get_directory_for_mark "${1}"`
+        if [ $directory == "null" ]; then
+            echo "${1} not found." >&2; return 2;
+        fi
+    fi
+
+    environment_structure=`cat "${MARKFILE}" | jq -r ".directories.\"${directory}\".env"`
+    if [ "${environment_structure}" = "null" ]; then
+        echo "environment not set for ${directory}" >&2
+        return 2
+    fi
+    environment=`echo ${environment_structure} | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' ' | tr '$' ' '`
+    echo "${environment}"
+    export "${environment}"
 }
 
 # em - Edit Markfile
@@ -109,6 +136,7 @@ function gm()
     extended_mark="${1}"
     extended_markdir=`_get_extended_markdir "${extended_mark}"` || { echo "${1} not found." >&2; return 2; }
     cd "${extended_markdir}"
+    ed
 }
 
 # bd - Install Directory
