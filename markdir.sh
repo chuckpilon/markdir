@@ -2,6 +2,7 @@ complete -F _markdir_complete dm
 complete -F _markdir_complete gm
 complete -F _markdir_complete lm
 complete -F _markdir_complete sm
+complete -F _markdir_complete_tasks xd
 
 # am - Add Mark
 # Adds a mark for the current working directory. The mark defaults to the directory's
@@ -98,13 +99,11 @@ function ed()
     fi
 
     environment_structure=`cat "${MARKFILE}" | jq -r ".directories.\"${directory}\".env"`
-    if [ "${environment_structure}" = "null" ]; then
-        echo "environment not set for ${directory}" >&2
-        return 2
+    if [ "${environment_structure}" != "null" ]; then
+        environment=`echo ${environment_structure} | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' ' | tr '$' ' '`
+        echo "${environment}"
+        export "${environment}"
     fi
-    environment=`echo ${environment_structure} | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' ' | tr '$' ' '`
-    echo "${environment}"
-    export "${environment}"
 }
 
 # em - Edit Markfile
@@ -137,6 +136,24 @@ function gm()
     extended_markdir=`_get_extended_markdir "${extended_mark}"` || { echo "${1} not found." >&2; return 2; }
     cd "${extended_markdir}"
     ed
+}
+
+# gms - Goto Mark for Session
+# Usage: Changes the working directory to the directory associated with the session.
+# Example: gms
+function gms()
+{
+    _verify_markfile || return 1
+
+    extended_mark="${1}"
+    mark=`_get_mark_for_session`
+    gm $mark
+
+    # extended_markdir=`_get_extended_markdir "${extended_mark}"` || { echo "${1} not found." >&2; return 2; }
+    # cd "${extended_markdir}"
+    # ed
+
+
 }
 
 # bd - Install Directory
@@ -284,6 +301,13 @@ function _get_directory_for_mark()
     echo "${directory}"
 }
 
+function _get_mark_for_session()
+{
+    session=${TERM_SESSION_ID}
+    mark=`cat "${MARKFILE}" | jq -r ".sessions.\"${session}\".mark"`
+    echo "${mark}"
+}
+
 function _get_mark_for_directory()
 {
     directory="${1}"
@@ -341,6 +365,17 @@ function _markdir_complete()
 
     MARKS=`cat "${MARKFILE}" | jq -r '.marks | to_entries[] | .key'`
     COMPREPLY=( $(compgen -W "${MARKS}" -- ${cur}) )
+}
+
+# Command line completion function for xd.
+# Completes a partially enterred mark.
+function _markdir_complete_tasks()
+{
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    TASKS=`cat "${MARKFILE}" | jq -r ".directories.\"${PWD}\".tasks | try keys | join(\" \")"`
+    COMPREPLY=( $(compgen -W "${TASKS}" -- ${cur}) )
 }
 
 function _get_extended_markdir()
