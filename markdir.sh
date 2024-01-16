@@ -1,7 +1,9 @@
-complete -F _markdir_complete dm
-complete -F _markdir_complete gm
-complete -F _markdir_complete lm
-complete -F _markdir_complete sm
+#! /bin/bash
+
+complete -F _markdir_complete_marks dm
+complete -F _markdir_complete_marks gm
+complete -F _markdir_complete_marks lm
+complete -F _markdir_complete_marks sm
 complete -F _markdir_complete_tasks xd
 
 # am - Add Mark
@@ -10,19 +12,22 @@ complete -F _markdir_complete_tasks xd
 # 
 # Usage: am [mark]
 # Example:
-#    $ cd /app/bea/wlserver_10.3/server/bin
-#    $ am wls103bin
-function am()
+#    $ cd /Users/cpilon/code/myproject
+#    $ am myproject
+am()
 {
+    local basemarkfile
+    local tmpmarkfile
+
     _verify_markfile || return 1
 
     if [ -z "${1}" ]; then
-        mark=`basename ${PWD}`
+        mark=$(basename "${PWD}")
     else
         mark="${1}"
     fi
 
-    directory=`_get_directory_for_mark "${mark}"`
+    directory=$(_get_directory_for_mark "${mark}")
     if [ "${directory}" != "null" ]; then
         echo "${mark} already marks ${directory}" >&2
         return 2
@@ -30,32 +35,36 @@ function am()
 
     description="${2}"
 
-    cat "${MARKFILE}" | jq ".marks |= . + { \"${mark}\": { \"dir\": \"${PWD}\", \"description\": \"${description}\" } }" > /tmp/$(basename "$MARKFILE")
-    cp /tmp/$(basename "$MARKFILE") "${MARKFILE}"
-    rm /tmp/$(basename "$MARKFILE")
+    basemarkfile=$(basename "${MARKFILE}")
+    tmpmarkfile="/tmp/${basemarkfile}"
+    jq ".marks |= . + { \"${mark}\": { \"dir\": \"${PWD}\", \"description\": \"${description}\" } }" "${MARKFILE}" > "${tmpmarkfile}"
+    cp "${tmpmarkfile}" "${MARKFILE}"
+    rm "${tmpmarkfile}"
 }
 
 # bd - Build Directory
 # Usage: Executes the build task associated with the directory
 # Example: bd
-function bd()
+bd()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "build" "FALSE" ${*} || return 1
+    _execute_directory_task "${PWD}" "build" "FALSE" "${@}" || return 1
 }
 
 # cm - Check Marks
 # Usage: Removes invalid marks from the mark file.
 # Example: cm
-function cm()
+cm()
 {
+    local marks
     _verify_markfile || return 1
 
-    MARKS=$((cat "${MARKFILE}" | jq -r '.marks | keys | @sh') | tr -d \'\")
-    for mark in "${MARKS[@]}"
+    # shellcheck disable=SC2207
+    marks=( $(jq -r '.marks | keys | @sh' "${MARKFILE}" | tr -d \') )
+    for mark in "${marks[@]}"
     do
-        directory=`_get_directory_for_mark "${mark}"`
+        directory=$(_get_directory_for_mark "${mark}")
         if [[ ! -d "$directory" ]]; then
             echo "${mark} is not valid (${directory})"
             dm "${mark}"
@@ -65,9 +74,12 @@ function cm()
 
 # dm - Delete Mark
 # Usage: dm mark
-# Example: dm wls103bin
-function dm()
+# Example: dm myproject
+dm()
 {
+    local basemarkfile
+    local tmpmarkfile
+
     _verify_markfile || return 1
 
     if [ -z "${1}" ]; then
@@ -76,43 +88,46 @@ function dm()
     fi
 
     mark="${1}"
-    cat "${MARKFILE}" | jq ".marks |= del(.\"$mark\")" > /tmp/$(basename "$MARKFILE")
-    cp /tmp/$(basename "$MARKFILE") "${MARKFILE}"
-    rm /tmp/$(basename "$MARKFILE")
+    basemarkfile=$(basename "${MARKFILE}")
+    tmpmarkfile="/tmp/${basemarkfile}"
+    
+    jq ".marks |= del(.\"$mark\")" "${MARKFILE}" > "${tmpmarkfile}"
+    cp "${tmpmarkfile}" "${MARKFILE}"
+    rm "${tmpmarkfile}"
 }
 
 # ed - Environment for Directory
 # Usage: ed [directory|mark]
-function ed()
+ed()
 {
     _verify_markfile || return 1
 
     if [ -z "${1}" ]; then
-        directory="$PWD"
+        directory="${PWD}"
     elif [ -d "${1}" ]; then
         directory="${1}"
     else 
-        directory=`_get_directory_for_mark "${1}"`
-        if [ $directory == "null" ]; then
+        directory=$(_get_directory_for_mark "${1}")
+        if [ "$directory" = "null" ]; then
             echo "${1} not found." >&2; return 2;
         fi
     fi
 
-    environment_structure=`cat "${MARKFILE}" | jq -r ".directories.\"${directory}\".env"`
+    environment_structure=$(jq -r ".directories.\"${directory}\".env" "${MARKFILE}")
     if [ "${environment_structure}" != "null" ]; then
-        environment=`echo ${environment_structure} | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' ' | tr '$' ' '`
+        environment=$(echo "${environment_structure}" | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' ' | tr '$' ' ')
         echo "${environment}"
-        export "${environment}"
+        export "${environment?}"
     fi
 }
 
 # em - Edit Markfile
 # Usage: em
-function em()
+em()
 {
     _verify_markfile || return 1
 
-    if [ ! -n "$EDITOR" ]; then
+    if [ -z "$EDITOR" ]; then
         echo "EDITOR is not set." >&2
         return 1
     fi
@@ -122,8 +137,8 @@ function em()
 
 # gm - Goto Mark
 # Usage: Changes the working directory to the directory associated with the mark.
-# Example: gm wls103bin
-function gm()
+# Example: gm myproject
+gm()
 {
     _verify_markfile || return 1
 
@@ -133,47 +148,46 @@ function gm()
     fi
 
     extended_mark="${1}"
-    extended_markdir=`_get_extended_markdir "${extended_mark}"` || { echo "${1} not found." >&2; return 2; }
-    cd "${extended_markdir}"
-    ed
+    extended_markdir=$(_get_extended_markdir "${extended_mark}") || { echo "${1} not found." >&2; return 2; }
+    cd "${extended_markdir}" || return
+    ed "$@"
 }
 
 # gms - Goto Mark for Session
 # Usage: Changes the working directory to the directory associated with the session.
 # Example: gms
-function gms()
+gms()
 {
     _verify_markfile || return 1
 
     extended_mark="${1}"
-    mark=`_get_mark_for_session`
-    gm $mark
+    mark=$(_get_mark_for_session)
+    if [ "${mark}" = "null" ]; then
+        echo "No mark found for session" >&2
+        return 1
+    fi
 
-    # extended_markdir=`_get_extended_markdir "${extended_mark}"` || { echo "${1} not found." >&2; return 2; }
-    # cd "${extended_markdir}"
-    # ed
-
-
+    gm "${mark}"
 }
 
 # bd - Install Directory
 # Usage: Executes the install task associated with the directory
 # Example: id
-function id()
+id()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "install" "FALSE" ${*} || return 1
+    _execute_directory_task "${PWD}" "install" "FALSE" "$@" || return 1
 }
 
 # ud - Up Directory
 # Usage: Executes the up task associated with the directory
 # Example: ud
-function ud()
+ud()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "up" "FALSE" ${*} || return 1
+    _execute_directory_task "${PWD}" "up" "FALSE" "$@" || return 1
 }
 
 
@@ -181,15 +195,15 @@ function ud()
 # Usage: im
 # If the current directory is marked, shows the mark, otherwise displays an error message.
 # Example:
-#    $ cd /app/bea/wlserver_10.3/server/bin
+#    $ cd /Users/cpilon/code/myproject
 #    $ im
-#    wls103bin
-function im()
+#    myproject
+im()
 {
     _verify_markfile || return 1
 
-    mark=`_get_mark_for_directory "${PWD}"`
-    if [[ "${mark}" == "" ]]; then
+    mark=$(_get_mark_for_directory "${PWD}")
+    if [[ "${mark}" = "" ]]; then
         echo "${PWD} is not marked." >&2
         return 1
     else
@@ -201,15 +215,15 @@ function im()
 # Usage: lm [mark]
 # If mark is specified, displays all information on the mark.  Otherwise, displays all marks and
 # directories.
-function lm()
+lm()
 {
     _verify_markfile || return 1
 
     mark="${1}"
     if [ -z "${mark}" ]; then
-        cat "${MARKFILE}" | jq '.marks | to_entries | map( { mark: .key, description: .value.description, dir: .value.dir })'
+        jq '.marks | to_entries | map( { mark: .key, description: .value.description, dir: .value.dir })' "${MARKFILE}"
     else
-        cat "${MARKFILE}" | jq ".marks.\"${mark}\""
+        jq ".marks.\"${mark}\"" "${MARKFILE}"
     fi
 }
 
@@ -218,7 +232,7 @@ function lm()
 # Displays the directory associated with a mark.
 # Example:
 #   $ cp item200128610.jpg $(sm images)
-function sm()
+sm()
 {
     _verify_markfile || return 1
 
@@ -228,26 +242,26 @@ function sm()
     fi
 
     extended_mark="${1}"
-    extended_markdir=`_get_extended_markdir "${extended_mark}"` || { echo "${1} not found." >&2; return 2; }
+    extended_markdir=$(_get_extended_markdir "${extended_mark}") || { echo "${1} not found." >&2; return 2; }
     echo "${extended_markdir}"
 }
 
 # td - Test Directory
 # Usage: Executes the test task associated with the directory
 # Example: td
-function td()
+td()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "test" "FALSE" ${*} || return 1
+    _execute_directory_task "${PWD}" "test" "FALSE" "${@}" || return 1
 }
 
 # sd - Show Directory
 # Usage: sd [directory|mark]
 # Displays the information associated with a directory or a marked directory.
 # Example:
-#   $ sd project
-function sd()
+#   $ sd myproject
+sd()
 {
     _verify_markfile || return 1
 
@@ -256,19 +270,40 @@ function sd()
     elif [ -d "${1}" ]; then
         directory="${1}"
     else 
-        directory=`_get_directory_for_mark "${1}"`
-        if [ $directory == "null" ]; then
+        directory=$(_get_directory_for_mark "${1}")
+        if [ "$directory" = "null" ]; then
             echo "${1} not found." >&2; return 2;
         fi
     fi
     _get_info_for_directory "${directory}" || { echo "${1} not found." >&2; return 2; }
 }
 
+utd()
+{
+    echo "Untagged directories:"
+
+    # shellcheck disable=SC2207
+    directories=( $(jq -r '.directories | to_entries[] | .key' "${MARKFILE}") )
+    for directory in "${directories[@]}"
+    do
+        mark=$(_get_mark_for_directory "${directory}")
+        if [[ "${mark}" = "" ]]; then
+            echo "${directory} is not marked." >&2
+        fi
+    done
+
+
+    # jq -r ".directories.\"${directory}\"" "${MARKFILE}"
+    # Get list of directories from .directories
+    # For each directory, see if there exists a marks.xxx.dir qith a matching directory
+    # If not print directory name
+}
+
 
 # xd - Execute Directory
 # Usage: Executes the specified task associated with the directory, or the default task by default
-# Example: xd wls103bin
-function xd()
+# Example: xd myproject
+xd()
 {
     _verify_markfile || return 1
 
@@ -285,55 +320,56 @@ function xd()
         task="${1}"
         shift 1
     fi
-    _execute_directory_task "${PWD}" "${task}" "${show_only}" ${*}
+    _execute_directory_task "${PWD}" "${task}" "${show_only}" "${@}"
 }
 
-function _get_info_for_directory()
+_get_info_for_directory()
 {
     directory="${1}"
-    cat "${MARKFILE}" | jq -r ".directories.\"${directory}\""
+    jq -r ".directories.\"${directory}\"" "${MARKFILE}"
 }
 
-function _get_directory_for_mark()
+_get_directory_for_mark()
 {
     mark="${1}"
-    directory=`cat "${MARKFILE}" | jq -r ".marks.\"${mark}\".dir"`
+    directory=$(jq -r ".marks.\"${mark}\".dir" "${MARKFILE}")
     echo "${directory}"
 }
 
-function _get_mark_for_session()
+_get_mark_for_session()
 {
     session=${TERM_SESSION_ID}
-    mark=`cat "${MARKFILE}" | jq -r ".sessions.\"${session}\".mark"`
+    mark=$(jq -r ".sessions.\"${session}\".mark" "${MARKFILE}")
+    # TODO: Return empty string instead of null
     echo "${mark}"
 }
 
-function _get_mark_for_directory()
+_get_mark_for_directory()
 {
     directory="${1}"
-    mark=`cat "${MARKFILE}" | jq -r ".marks | to_entries[] | select(.value.dir == \"${directory}\") | .key"`
+    mark=$(jq -r ".marks | to_entries[] | select(.value.dir == \"${directory}\") | .key" "${MARKFILE}")
     echo "${mark}"
 }
 
 # Executes the task (build, test, default, etc.) for the mark
-function _execute_directory_task()
+_execute_directory_task()
 {
     directory="${1}"
     task="${2}"
     show_only="${3}"
     shift 3
 
-    command_structure=`cat "${MARKFILE}" | jq -r ".directories.\"${directory}\".tasks.\"${task}\""`
+    command_structure=$(jq -r ".directories.\"${directory}\".tasks.\"${task}\"" "${MARKFILE}")
     if [ "${command_structure}" = "null" ]; then
         echo "${task} task not set for ${directory}" >&2
         return 2
     fi
-    command=`echo ${command_structure} | jq -r ".command"`
-    environment_structure=`echo ${command_structure} | jq -r ".env"`
-    if [[ "${environment_structure}" == "null" ]]; then
+    command=$(echo "${command_structure}" | jq -r ".command")
+    environment_structure=$(echo "${command_structure}" | jq -r ".env")
+    if [[ "${environment_structure}" = "null" ]]; then
         environment=""
     else
-        environment=`echo ${environment_structure} | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' ' | tr '$' ' '`
+        environment=$(echo "${environment_structure}" | jq -r 'to_entries[] | "\(.key)=\(.value)"' | tr '\n' ' ' | tr '$' ' ')
     fi
 
     echo "${environment}${command} ${*}"
@@ -344,9 +380,9 @@ function _execute_directory_task()
 
 }
 
-function _verify_markfile()
+_verify_markfile()
 {
-    if [ ! -n "${MARKFILE}" ]; then
+    if [ -z "${MARKFILE}" ]; then
         echo "MARKFILE is not set." >&2
         return 1
     fi
@@ -357,35 +393,42 @@ function _verify_markfile()
 }
 
 # Command line completion function for im, lm, sm, gm, and dm.
-# Completes a partially enterred mark.
-function _markdir_complete()
+# Completes a partially entered mark.
+_markdir_complete_marks()
 {
+    local marks
+
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
 
-    MARKS=`cat "${MARKFILE}" | jq -r '.marks | to_entries[] | .key'`
-    COMPREPLY=( $(compgen -W "${MARKS}" -- ${cur}) )
+    marks=$(jq -r '.marks | to_entries[] | .key' "${MARKFILE}")
+    # shellcheck disable=SC2207
+    COMPREPLY=( $(compgen -W "${marks}" -- "${cur}") )
 }
 
 # Command line completion function for xd.
-# Completes a partially enterred mark.
-function _markdir_complete_tasks()
+# Completes a partially entered mark.
+_markdir_complete_tasks()
 {
+    local tasks
+
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
 
-    TASKS=`cat "${MARKFILE}" | jq -r ".directories.\"${PWD}\".tasks | try keys | join(\" \")"`
-    COMPREPLY=( $(compgen -W "${TASKS}" -- ${cur}) )
+    tasks=$(jq -r ".directories.\"${PWD}\".tasks | try keys | join(\" \")" "${MARKFILE}")
+    # shellcheck disable=SC2207
+    COMPREPLY=( $(compgen -W "${tasks}" -- "${cur}") )
 }
 
-function _get_extended_markdir()
+_get_extended_markdir()
 {
-    mark=`echo "${1}" | awk -F/ '{print $1}'`
-    directory=`_get_directory_for_mark "${mark}"`
-    if [[ "${directory}" == "null" ]]; then
+    mark=$(echo "${1}" | awk -F/ '{print $1}')
+    directory=$(_get_directory_for_mark "${mark}")
+    if [[ "${directory}" = "null" ]]; then
         return 2
     else
-        subdir=`echo "${1}" | sed "s/^${mark}//g"`
+        # shellcheck disable=SC2001
+        subdir=$(echo "${1}" | sed "s/^${mark}//g")
         echo "${directory}${subdir}"
     fi
 }
