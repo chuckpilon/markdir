@@ -42,6 +42,18 @@ am()
     rm "${tmpmarkfile}"
 }
 
+# asm - Add Session Mark
+asm()
+{
+    _verify_markfile || return 1
+
+    basemarkfile=$(basename "${MARKFILE}")
+    tmpmarkfile="/tmp/${basemarkfile}"
+    jq ".sessions |= . + { \"${TERM_SESSION_ID}\": { \"dir\": \"${PWD}\" } }" "${MARKFILE}" > "${tmpmarkfile}"
+    cp "${tmpmarkfile}" "${MARKFILE}"
+    rm "${tmpmarkfile}"
+}
+
 # bd - Build Directory
 # Usage: Executes the build task associated with the directory
 # Example: bd
@@ -160,14 +172,13 @@ gms()
 {
     _verify_markfile || return 1
 
-    extended_mark="${1}"
-    mark=$(_get_mark_for_session)
-    if [ "${mark}" = "null" ]; then
-        echo "No mark found for session" >&2
+    dir=$(_get_directory_for_session)
+    if [ -z "${dir}" ]; then
+        echo "No directory found for session" >&2
         return 1
     fi
 
-    gm "${mark}"
+    cd "${dir}" || return 1
 }
 
 # bd - Install Directory
@@ -179,17 +190,6 @@ id()
 
     _execute_directory_task "${PWD}" "install" "FALSE" "$@" || return 1
 }
-
-# ud - Up Directory
-# Usage: Executes the up task associated with the directory
-# Example: ud
-ud()
-{
-    _verify_markfile || return 1
-
-    _execute_directory_task "${PWD}" "up" "FALSE" "$@" || return 1
-}
-
 
 # im - Is Marked
 # Usage: im
@@ -336,12 +336,15 @@ _get_directory_for_mark()
     echo "${directory}"
 }
 
-_get_mark_for_session()
+_get_directory_for_session()
 {
     session=${TERM_SESSION_ID}
-    mark=$(jq -r ".sessions.\"${session}\".mark" "${MARKFILE}")
-    # TODO: Return empty string instead of null
-    echo "${mark}"
+    dir=$(jq -r ".sessions.\"${session}\".dir" "${MARKFILE}")
+    if [ "${dir}" = "null" ]; then
+        echo ""
+    else
+        echo "${dir}"
+    fi
 }
 
 _get_mark_for_directory()
