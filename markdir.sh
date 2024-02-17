@@ -278,6 +278,28 @@ sd()
     _get_info_for_directory "${directory}" || { echo "${1} not found." >&2; return 2; }
 }
 
+# st - Show Tasks
+# Usage: st [directory|mark]
+# Displays the tasks associated with a directory or a marked directory.
+# Example:
+#   $ st myproject
+st()
+{
+    _verify_markfile || return 1
+
+    if [ -z "${1}" ]; then
+        directory="$PWD"
+    elif [ -d "${1}" ]; then
+        directory="${1}"
+    else 
+        directory=$(_get_directory_for_mark "${1}")
+        if [ "$directory" = "null" ]; then
+            echo "${1} not found." >&2; return 2;
+        fi
+    fi
+    _get_tasks_for_directory "${directory}" || { echo "${1} not found." >&2; return 2; }
+}
+
 utd()
 {
     echo "Untagged directories:"
@@ -327,6 +349,12 @@ _get_info_for_directory()
 {
     directory="${1}"
     jq -r ".directories.\"${directory}\"" "${MARKFILE}"
+}
+
+_get_tasks_for_directory()
+{
+    directory="${1}"
+    jq -r ".directories.\"${directory}\".tasks | keys[] as \$k | \"\(\$k)\t\(.[\$k] | .command)\"" ${MARKFILE} | awk -F\t '{printf "\033[38;5;69m%-20.20s \033[38;5;34m%s\n", $1, $2}'
 }
 
 _get_directory_for_mark()

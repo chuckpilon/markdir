@@ -1,8 +1,10 @@
 # markdir
 
-Shell functions for tagging directories for easy navigation and use in other commands that take directory name(s) as parameters.
+Shell functions for 
+- tagging directories with marks (aka tags) for easy navigation and use in other commands that take directory name(s) as parameters
+- executing directory-specific aliases (tasks)
 
-Marks (aka tags) are stored in a text file referred to as the mark file. Commands are provided to read and write marks in the mark file as well as perform maintenance on the mark file.
+Marks and tasks are configured in a JSON file referred to as the mark file. Commands are provided to read and write marks in the mark file as well as perform maintenance on the mark file.
 
 
 ## Functions
@@ -13,8 +15,8 @@ Adds a mark to the mark file.
 Usage: `am `*`mark`*`[description]`
 
 ```
-$ cd /var/log
-$ am log "Log files"
+$ cd /Users/me/code/myproject
+$ am myproject "My Project"
 ```
 
 ### bd - Build Directory
@@ -23,8 +25,9 @@ Executes the `build` task associated with the current directory.
 Usage: `bd`
 
 ```
-$ cd /projects/project
+$ gm myproject
 $ bd
+pants package ::
 ```
 
 ### cm - Check Mark File
@@ -61,7 +64,7 @@ Changes the current directory to the directory associated with the mark
 Usage: `gm `*`mark`*
 
 ```
-$ gm log
+$ gm myproject
 ```
 
 ### im - Is Marked
@@ -70,9 +73,9 @@ Shows mark for the current directory
 Usage: `im`
 
 ```
-$ cd /var/log
+$ cd /Users/me/code/myproject
 $ im
-log
+myproject
 ```
 
 ### lm - List Marks
@@ -84,17 +87,18 @@ Usage: `lm [mark]`
 $ lm
 [
   {
-    "mark": "log",
-    "description": "Log files",
-    "dir": "/var/log"
+    "mark": "myproject",
+    "description": "My Project",
+    "dir": "/Users/me/code/myproject"
   },
   ...
 ]
 
-$ lm log
+$ lm myproject
 {
-  "dir": "/var/log",
-  "description": "Log files"
+  "mark": "myproject",
+  "description": "My Project",
+  "dir": "/Users/me/code/myproject"
 }
 ```
 
@@ -104,10 +108,25 @@ Shows the directory associated with a mark
 Usage: `sm `*`mark`*
 
 ```
-$ ls -1 $(sm log)/apache2
-access.log
-error.log
-other_vhosts_access.log
+$ cat $(sm myproject)/README.md
+# My Project
+This is the README for My Project.
+
+## Background
+```
+
+### st - Show Tasks
+Shows the task names and definitions associated with a mark
+
+Usage: `st `*`mark`*
+
+```
+$ gm myproject
+$ st
+build                pants package ::
+default              pants run app
+lint                 pants fmt lint ::
+test                 pants test ::
 ```
 
 ### td - Test Directory
@@ -116,9 +135,9 @@ Executes the `test` task associated with the current directory.
 Usage: `td`
 
 ```
-$ gm project
+$ gm myproject
 $ td
-yarn test
+pants test ::
 ```
 
 ### xd - Execute Directory
@@ -127,11 +146,11 @@ Executes the specified task associated with the current directory, or the run ta
 Usage: `xd [task]`
 
 ```
-$ gm project
+$ gm myproject
 $ xd
-yarn dev
+pants run app
 $ xd lint
-yarn lint
+pants fmt lint ::
 ```
 
 
