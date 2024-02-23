@@ -220,11 +220,11 @@ lm()
     _verify_markfile || return 1
 
     mark="${1}"
-    if [ -z "${mark}" ]; then
-        jq '.marks | to_entries | map( { mark: .key, description: .value.description, dir: .value.dir })' "${MARKFILE}"
+    (if [ -z "${mark}" ]; then
+        jq -r ".marks | keys[] as \$k | \"\(\$k)\t\(.[\$k] | .description)\t\(.[\$k] | .dir)\"" "${MARKFILE}"
     else
-        jq ".marks.\"${mark}\"" "${MARKFILE}"
-    fi
+        jq -r "[.marks.\"${mark}\" | { key: \"${mark}\", description: .description, dir: .dir } | values[]] | join(\"\t\")" "${MARKFILE}"
+    fi) | awk -F\\t '{printf "\033[38;5;69m%-35.35s \033[38;5;34m%-30.30s \033[38;5;34m%s\n", $1, $2, $3}'
 }
 
 # sm - Show Mark
@@ -354,7 +354,7 @@ _get_info_for_directory()
 _get_tasks_for_directory()
 {
     directory="${1}"
-    jq -r ".directories.\"${directory}\".tasks | keys[] as \$k | \"\(\$k)\t\(.[\$k] | .command)\"" ${MARKFILE} | awk -F\t '{printf "\033[38;5;69m%-20.20s \033[38;5;34m%s\n", $1, $2}'
+    jq -r ".directories.\"${directory}\".tasks | keys[] as \$k | \"\(\$k)\t\(.[\$k] | .command)\"" "${MARKFILE}" | awk -F\\t '{printf "\033[38;5;69m%-20.20s \033[38;5;34m%s\n", $1, $2}'
 }
 
 _get_directory_for_mark()
