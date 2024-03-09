@@ -42,8 +42,8 @@ am()
     rm "${tmpmarkfile}"
 }
 
-# asm - Add Session Mark
-asm()
+# ams - Add Mark for Session
+ams()
 {
     _verify_markfile || return 1
 
@@ -104,6 +104,20 @@ dm()
     tmpmarkfile="/tmp/${basemarkfile}"
     
     jq ".marks |= del(.\"$mark\")" "${MARKFILE}" > "${tmpmarkfile}"
+    cp "${tmpmarkfile}" "${MARKFILE}"
+    rm "${tmpmarkfile}"
+}
+
+# dms - Delete Mark for Session
+# Usage: dms
+# Example: dms
+dms()
+{
+    _verify_markfile || return 1
+
+    basemarkfile=$(basename "${MARKFILE}")
+    tmpmarkfile="/tmp/${basemarkfile}"
+    jq ".sessions |= del(.\"${TERM_SESSION_ID}\")" "${MARKFILE}" > "${tmpmarkfile}"
     cp "${tmpmarkfile}" "${MARKFILE}"
     rm "${tmpmarkfile}"
 }
@@ -463,3 +477,5 @@ _get_extended_markdir()
         echo "${directory}${subdir}"
     fi
 }
+
+_verify_markfile || return 1
