@@ -195,14 +195,25 @@ gms()
     cd "${dir}" || return 1
 }
 
-# bd - Install Directory
-# Usage: Executes the install task associated with the directory
+# id - Initialize Directory
+# Usage: Initializes the current directory by adding an entry to the directories dictionary
+# and configuring a default task that echos the directoy path
 # Example: id
 id()
 {
     _verify_markfile || return 1
 
-    _execute_directory_task "${PWD}" "install" "FALSE" "$@" || return 1
+    command_structure=$(jq -r ".directories.\"${PWD}\"" "${MARKFILE}")
+    if [ "${command_structure}" != "null" ]; then
+        echo "${PWD} is already initialized" >&2
+        return 2
+    fi
+
+    basemarkfile=$(basename "${MARKFILE}")
+    tmpmarkfile="/tmp/${basemarkfile}"
+    jq ".directories |= . + { \"${PWD}\": { \"tasks\": { \"default\": { \"command\": \"echo ${PWD}\"} } } }" "${MARKFILE}" > "${tmpmarkfile}"
+    cp "${tmpmarkfile}" "${MARKFILE}"
+    rm "${tmpmarkfile}"
 }
 
 # im - Is Marked
