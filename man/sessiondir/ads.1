@@ -1,0 +1,34 @@
+.TH ads 1 "30 March 2024" "sessiondir 3.0.0"
+.SH NAME
+ads - add directory for session
+.SH SYNOPSIS
+.B ads
+.I ads
+.B
+.SH DESCRIPTION
+Add the current directory as the default directory for the terminal session.
+After adding directory for the session, gds(1) command can be used to switch to the directory.
+
+For example,
+
+$ cd /projects/myproject
+.br
+$ ads
+.br
+$ cd
+.br
+$ gds
+.br
+$ echo $pwd
+/projects/myproject
+
+.SH AUTHOR
+Written by Charles Pilon.
+.SH ENVIRONMENT
+SESSIONFILE  File used to hold sessiondir configuration.
+.SH SEE ALSO
+dds(1), gds(1)
+.SH COPYRIGHT
+Copyright 2024 Charles Pilon
+.SH LICENSE
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.

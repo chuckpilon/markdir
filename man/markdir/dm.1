@@ -1,26 +1,30 @@
-.TH st 1 "17 February 2024" "markdir 2.2.0"
+.TH dm 1 "30 March 2024" "markdir 3.0.0"
 .SH NAME
-st - show tasks
+dm - delete mark
 .SH SYNOPSIS
-.B sm
+.B dm
 .I mark
 .B
 .SH DESCRIPTION
-Echos the task names and definitions to STDOUT.
+Deletes a mark from the mark file.
 
 For example,
-
-$ gm myproject
-$ st
-default              poetry run start_dev
-test                 poetry run pytest -W ignore::DeprecationWarning
-
+.br
+$ sm log
+.br
+/var/log
+.br
+$ dm log
+.br
+$ sm log
+.br
+log not found
 .SH AUTHOR
 Written by Charles Pilon.
 .SH ENVIRONMENT
 MARKFILE  File used to map marks to directories and directories to tasks.
 .SH SEE ALSO
-am(1), bd(1), cm(1), dm(1), em(1), gm(1), im(1), lm(1), td(1), xd(1)
+am(1), cm(1), em(1), gm(1), im(1), lm(1), sm(1)
 .SH COPYRIGHT
 Copyright 2024 Charles Pilon
 .SH LICENSE

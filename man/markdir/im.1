@@ -1,31 +1,16 @@
-.TH dm 1 "17 January 2022" "markdir 2.2.0"
+.TH im 1 "30 March 2024" "markdir 3.0.0"
 .SH NAME
-dm - delete mark
+im - is marked
 .SH SYNOPSIS
-.B dm
-.I mark
-.B
+.B im
 .SH DESCRIPTION
-Deletes a mark from the mark file.
-
-For example,
-
-$ sm log
-
-/var/log
-
-$ dm log
-
-$ sm log
-
-log not found
-
+Checks to see if the current working directory is tagged in the mark file. If so, the tag is output to STDOUT.
 .SH AUTHOR
 Written by Charles Pilon.
 .SH ENVIRONMENT
 MARKFILE  File used to map marks to directories and directories to tasks.
 .SH SEE ALSO
-am(1), bd(1), cm(1), em(1), gm(1), im(1), lm(1), sm(1), st(1), td(1), xd(1)
+am(1), cm(1), dm(1), em(1), gm(1), lm(1), sm(1)
 .SH COPYRIGHT
 Copyright 2024 Charles Pilon
 .SH LICENSE

@@ -174,8 +174,9 @@ pants fmt lint ::
 
         $ manpath
         /usr/local/man:/usr/local/share/man:/usr/share/man
-
-        $ sudo cp man/*.1 /usr/local/share/man/man1
+        $ sudo cp man/markdir/*.1 /usr/local/share/man/man1
+        $ sudo cp man/execdir/*.1 /usr/local/share/man/man1
+        $ sudo cp man/sessiondir/*.1 /usr/local/share/man/man1
 
 # LICENSE
 Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
