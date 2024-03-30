@@ -1,4 +1,4 @@
-.TH lm 1 "17 January 2022" "markdir 2.2.0"
+.TH lm 1 "30 March 2024" "markdir 3.0.0"
 .SH NAME
 lm - list marks
 .SH SYNOPSIS
@@ -11,27 +11,24 @@ Lists the directory and description for the specified mark, or all marks if no m
 For example,
 
 $ lm
-[
-  {
-    "mark": "log",
-    "description": "Log files",
-    "dir": "/var/log"
-  },
-  ...
-]
+.br
+myproject1                          My Project                     /projects/myproject1
+.br
+myproject2                          My Second Project              /projects/myproject2
+.br
+myproject3                          My Third Project               /projects/myproject3
+.br
 
-$ lm log
-{
-  "dir": "/var/log",
-  "description": "Log files"
-}
-```
+$ lm myproject2
+.br
+myproject2                          My Second Project              /projects/myproject2
+
 .SH AUTHOR
 Written by Charles Pilon.
 .SH ENVIRONMENT
 MARKFILE  File used to map marks to directories and directories to tasks.
 .SH SEE ALSO
-am(1), bd(1), cm(1), dm(1), em(1), gm(1), im(1), sm(1), st(1), td(1), xd(1)
+am(1), cm(1), dm(1), em(1), gm(1), im(1), sm(1)
 .SH COPYRIGHT
 Copyright 2024 Charles Pilon
 .SH LICENSE

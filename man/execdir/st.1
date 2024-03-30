@@ -1,0 +1,29 @@
+.TH ed 1 "30 March 2024" "execdir 3.0.0"
+.SH NAME
+st - show tasks
+.SH SYNOPSIS
+.B st
+.B
+.SH DESCRIPTION
+Echos the task names and definitions to STDOUT.
+
+For example,
+
+$ cd /projects/myproject1
+.br
+$ st
+.br
+default              poetry run start_dev
+.br
+test                 poetry run pytest -W ignore::DeprecationWarning
+
+.SH AUTHOR
+Written by Charles Pilon.
+.SH ENVIRONMENT
+EXECFILE  File used to hold execdir configuration.
+.SH SEE ALSO
+bd(1), ed(1), id(1), sd(1), td(1), xd(1)
+.SH COPYRIGHT
+Copyright 2024 Charles Pilon
+.SH LICENSE
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.

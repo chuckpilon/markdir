@@ -1,0 +1,27 @@
+.TH ed 1 "30 March 2024" "execdir 3.0.0"
+.SH NAME
+ed - environment for directory
+.SH SYNOPSIS
+.B ed
+.I directory
+.B
+.SH DESCRIPTION
+Shows the environment variables that will be set for each task execution.
+
+For example,
+
+$ ed myproject1
+.br
+AWS_PROFILE=myproject1_aws_account APP_NAME=myproject1
+.br
+
+.SH AUTHOR
+Written by Charles Pilon.
+.SH ENVIRONMENT
+EXECFILE  File used to hold execdir configuration.
+.SH SEE ALSO
+bd(1), id(1), sd(1), st(1), td(1), xd(1)
+.SH COPYRIGHT
+Copyright 2024 Charles Pilon
+.SH LICENSE
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.

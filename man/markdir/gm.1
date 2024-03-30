@@ -1,29 +1,30 @@
-.TH am 1 "17 January 2022" "markdir 2.2.0"
+.TH gm 1 "30 March 2024" "markdir 3.0.0"
 .SH NAME
-am - add mark
+gm - goto mark
 .SH SYNOPSIS
-.B am
+.B gm
 .I mark
 .B
 .SH DESCRIPTION
-Tag the current directory with the specified mark.
-After adding a mark to a directory, the mark can be used by the gm(1) and sm(1) commands.
+Change the current working directory to the directory associated with the mark.
 
 For example,
-
-$ cd /var/log
-
-$ am log
-
-$ ls $(sm log)/apache2
-
-access.log  error.log  other_vhosts_access.log
+.br
+$ sm log
+.br
+/var/log
+.br
+$ gm log
+.br
+$ pwd
+.br
+/var/log
 .SH AUTHOR
 Written by Charles Pilon.
 .SH ENVIRONMENT
 MARKFILE  File used to map marks to directories and directories to tasks.
 .SH SEE ALSO
-bd(1), cm(1), dm(1), em(1), gm(1), im(1), lm(1), sm(1), st(1), td(1), xd(1)
+am(1), cm(1), dm(1), em(1), im(1), lm(1), sm(1)
 .SH COPYRIGHT
 Copyright 2024 Charles Pilon
 .SH LICENSE
