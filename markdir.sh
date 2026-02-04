@@ -2,6 +2,7 @@
 
 complete -F _markdir_complete_marks dm
 complete -F _markdir_complete_marks gm
+complete -F _markdir_complete_worktrees gw
 complete -F _markdir_complete_marks lm
 complete -F _markdir_complete_marks sm
 
@@ -79,7 +80,7 @@ dm()
     mark="${1}"
     basemarkfile=$(basename "${MARKFILE}")
     tmpmarkfile="/tmp/${basemarkfile}"
-    
+
     jq ".marks |= del(.\"$mark\")" "${MARKFILE}" > "${tmpmarkfile}"
     cp "${tmpmarkfile}" "${MARKFILE}"
     rm "${tmpmarkfile}"
@@ -111,9 +112,91 @@ gm()
         return 1
     fi
 
+    # If "main" is specified and we're in a git worktree, switch to the main worktree first
+    if [ "${1}" = "main" ]; then
+        if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+            # Get the git directory (for worktrees, this contains /worktrees/)
+            git_dir=$(git rev-parse --git-dir 2>/dev/null)
+            
+            # If the git dir path contains "worktrees", we're in a worktree
+            if [[ "${git_dir}" == *"/worktrees/"* ]]; then
+                # Get the main worktree path (first entry in worktree list)
+                main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print $2; exit}')
+                
+                if [ -n "${main_worktree}" ] && [ -d "${main_worktree}" ]; then
+                    # Switch to the main worktree and return
+                    cd "${main_worktree}" || return
+                    return 0
+                fi
+            fi
+        fi
+        # If we get here with "main", fall through to normal mark lookup
+    fi
+
     extended_mark="${1}"
     extended_markdir=$(_get_extended_markdir "${extended_mark}") || { echo "${1} not found." >&2; return 2; }
     cd "${extended_markdir}" || return
+}
+
+# gw - Goto Worktree
+# Usage: Changes the working directory to the specified git worktree.
+#        If a mark is specified, starts from that mark's directory.
+# Example: 
+#   gw CCA-10
+#   gw fpl-cs-cni-infrastructure CCA-11
+gw()
+{
+    local base_dir
+    local worktree_name
+
+    if [ -z "${1}" ]; then
+        echo "Usage: gw [mark] worktree_name" >&2
+        return 1
+    fi
+
+    # Check if two parameters provided (mark and worktree)
+    if [ -n "${2}" ]; then
+        _verify_markfile || return 1
+
+        mark="${1}"
+        worktree_name="${2}"
+
+        # Get the directory for the mark
+        base_dir=$(_get_directory_for_mark "${mark}")
+        if [[ "${base_dir}" = "null" ]]; then
+            echo "Mark '${mark}' not found." >&2
+            return 2
+        fi
+
+        if [[ ! -d "${base_dir}" ]]; then
+            echo "Directory '${base_dir}' does not exist." >&2
+            return 2
+        fi
+    else
+        # Single parameter - worktree name from current directory
+        worktree_name="${1}"
+        base_dir="${PWD}"
+    fi
+
+    # Check if the base directory is in a git repository
+    if ! git -C "${base_dir}" rev-parse --git-dir > /dev/null 2>&1; then
+        echo "Not in a git repository." >&2
+        return 1
+    fi
+
+    # Get the list of worktrees and find the matching one
+    # Parse porcelain format: worktree line comes before branch line
+    worktree_path=$(git -C "${base_dir}" worktree list --porcelain | awk -v name="${worktree_name}" '
+        /^worktree / { path = $2 }
+        /^branch / && $2 ~ name"$" { print path; exit }
+    ')
+
+    if [ -z "${worktree_path}" ]; then
+        echo "Worktree '${worktree_name}' not found." >&2
+        return 2
+    fi
+
+    cd "${worktree_path}" || return
 }
 
 # im - Is Marked
@@ -194,6 +277,52 @@ _get_mark_for_directory()
     directory="${1}"
     mark=$(jq -r ".marks | to_entries[] | select(.value.dir == \"${directory}\") | .key" "${MARKFILE}")
     echo "${mark}"
+}
+
+# Command line completion function for gw.
+# Completes marks (first arg) or worktree names (first or second arg).
+_markdir_complete_worktrees()
+{
+    local worktrees
+    local marks
+    local base_dir
+
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    # If completing the first argument, offer both marks and worktrees
+    if [ "${COMP_CWORD}" -eq 1 ]; then
+        # Get marks
+        if [ -n "${MARKFILE}" ] && [ -f "${MARKFILE}" ]; then
+            marks=$(jq -r '.marks | to_entries[] | .key' "${MARKFILE}" 2>/dev/null)
+        fi
+
+        # Get worktrees from current directory
+        if git rev-parse --git-dir > /dev/null 2>&1; then
+            worktrees=$(git worktree list --porcelain | grep "^branch " | cut -d'/' -f3-)
+        fi
+
+        # shellcheck disable=SC2207
+        COMPREPLY=( $(compgen -W "${marks} ${worktrees}" -- "${cur}") )
+
+    # If completing the second argument, get worktrees from the mark's directory
+    elif [ "${COMP_CWORD}" -eq 2 ]; then
+        local mark="${COMP_WORDS[1]}"
+
+        # Try to get the directory for the mark
+        if [ -n "${MARKFILE}" ] && [ -f "${MARKFILE}" ]; then
+            base_dir=$(jq -r ".marks.\"${mark}\".dir" "${MARKFILE}" 2>/dev/null)
+
+            if [ -n "${base_dir}" ] && [ "${base_dir}" != "null" ] && [ -d "${base_dir}" ]; then
+                # Get worktrees from the mark's directory
+                if git -C "${base_dir}" rev-parse --git-dir > /dev/null 2>&1; then
+                    worktrees=$(git -C "${base_dir}" worktree list --porcelain | grep "^branch " | cut -d'/' -f3-)
+                    # shellcheck disable=SC2207
+                    COMPREPLY=( $(compgen -W "${worktrees}" -- "${cur}") )
+                fi
+            fi
+        fi
+    fi
 }
 
 _verify_markfile()
